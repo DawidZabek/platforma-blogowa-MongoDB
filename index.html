@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <title>Platforma Blogowa</title>
+</head>
+<body>
+
+<h1>Platforma Blogowa</h1>
+
+<h2>Popularne tagi</h2>
+<div id="tags"></div>
+
+<h2>Posty</h2>
+<input id="tagFilter" placeholder="Filtruj po tagu">
+<button onclick="loadPosts()">Szukaj</button>
+<button onclick="document.getElementById('tagFilter').value=''; loadPosts()">Wyczyść</button>
+<div id="posts"></div>
+
+<h2>Dodaj post</h2>
+<input id="authorId" placeholder="ID autora"><br>
+<textarea id="postContent" rows="3" cols="50" placeholder="Treść posta"></textarea><br>
+<input id="postTags" placeholder="Tagi (przecinek)"><br>
+<button onclick="createPost()">Dodaj post</button>
+
+<hr>
+<div id="notifications"><strong>Powiadomienia (live):</strong></div>
+
+<script>
+  const API = '/api';
+
+  async function loadTags() {
+    const res = await fetch(`${API}/tags/popular`);
+    const tags = await res.json();
+    document.getElementById('tags').innerHTML = tags.map(t => `${t.tag} (${t.count})`).join(', ');
+  }
+
+  async function loadPosts() {
+    const tag = document.getElementById('tagFilter').value.trim();
+    const url = tag ? `${API}/posts?tag=${tag}` : `${API}/posts`;
+    const res = await fetch(url);
+    const posts = await res.json();
+
+    document.getElementById('posts').innerHTML = posts.map(post => `
+      <hr>
+      <p><strong>${post.author_id?.name || 'Nieznany'}</strong> · ${new Date(post.createdAt).toLocaleDateString('pl-PL')}</p>
+      <p>${post.content}</p>
+      <p>Tagi: ${(post.tags || []).join(', ')}</p>
+      <p>Komentarze:</p>
+      <ul>${(post.comments || []).map(c => `<li><strong>${c.author_id?.name || c.author_id}</strong>: ${c.content}</li>`).join('')}</ul>
+      <input id="ca-${post._id}" placeholder="ID autora komentarza">
+      <input id="cc-${post._id}" placeholder="Treść komentarza">
+      <button onclick="addComment('${post._id}')">Dodaj komentarz</button>
+    `).join('');
+  }
+
+  async function createPost() {
+    const author_id = document.getElementById('authorId').value.trim();
+    const content = document.getElementById('postContent').value.trim();
+    const tags = document.getElementById('postTags').value.split(',').map(t => t.trim()).filter(Boolean);
+    await fetch(`${API}/posts`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ author_id, content, tags })
+    });
+    loadPosts();
+  }
+
+  async function addComment(postId) {
+    const author_id = document.getElementById(`ca-${postId}`).value.trim();
+    const content = document.getElementById(`cc-${postId}`).value.trim();
+    await fetch(`${API}/posts/${postId}/comments`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ author_id, content })
+    });
+    loadPosts();
+  }
+
+  function connectSSE() {
+    const es = new EventSource(`${API}/notifications/stream`);
+    es.onmessage = (e) => {
+      const n = JSON.parse(e.data);
+      const p = document.createElement('p');
+      p.textContent = n.content;
+      document.getElementById('notifications').appendChild(p);
+    };
+  }
+
+  loadTags();
+  loadPosts();
+  connectSSE();
+</script>
+</body>
+</html>
