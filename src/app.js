@@ -1,6 +1,7 @@
-const express = require('express');
-const cors = require('cors');
-const helmet = require('helmet');
+import express from "express"
+import cors from "cors"
+import helmet from "helmet"
+import './models/user.js'
 
 const app = express();
 
@@ -8,7 +9,10 @@ app.use(helmet());
 app.use(cors());
 app.use(express.json());
 
-app.use('/api/posts', require('./routes/posts'));
-app.use('/api/tags', require('./routes/tags'));
+import postsRouter from './routes/posts.js';
+import tagsRouter from './routes/tags.js';
 
-module.exports = app;
+app.use('/api/posts', postsRouter);
+app.use('/api/tags', tagsRouter);
+
+export default app
