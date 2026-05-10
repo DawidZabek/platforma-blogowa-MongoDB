@@ -1,7 +1,8 @@
 import Post from '../models/post.js';
 
 const getAllPosts = async (req, res) => {
-    const posts = await Post.find()
+    const filter = req.query.tag ? { tags: req.query.tag.toLowerCase() } : {};
+    const posts = await Post.find(filter)
         .populate('author_id', 'name')
         .sort({ createdAt: -1 });
     res.json(posts);
