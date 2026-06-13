@@ -6,7 +6,7 @@ import Card from "react-bootstrap/Card";
 import Button from "react-bootstrap/Button";
 import Alert from "react-bootstrap/Alert";
 
-import PostCard from "../components/PostCard";
+import PostCard from "../components/postCard";
 import { getPosts } from "../api/postsApi";
 import { getPopularTags } from "../api/tagsApi";
 import { useHomeData } from "../hooks/useHomeData";

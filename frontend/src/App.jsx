@@ -4,10 +4,10 @@ import Navbar from "react-bootstrap/Navbar";
 import Nav from "react-bootstrap/Nav";
 import Container from "react-bootstrap/Container";
 
-import Home from "./pages/Home";
-import CreatePost from "./pages/CreatePost";
-import PostDetails from "./pages/PostDetails";
-import Dashboard from "./pages/Dashboard";
+import Home from "./pages/home";
+import CreatePost from "./pages/createPost";
+import PostDetails from "./pages/postDetails";
+import Dashboard from "./pages/dashboard";
 
 function App() {
     return (
