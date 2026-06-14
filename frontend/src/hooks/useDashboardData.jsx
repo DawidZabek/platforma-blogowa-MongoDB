@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 import { getPosts } from "../api/postsApi";
-import { getPopularTags } from "../api/tagsApi";
+import { getPopularTags, getAuthorStats } from "../api/tagsApi";
 
 export function useDashboardData() {
     const [posts, setPosts] = useState([]);
     const [popularTags, setPopularTags] = useState([]);
+    const [topAuthors, setTopAuthors] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
 
@@ -13,13 +14,15 @@ export function useDashboardData() {
             setLoading(true);
             setError("");
 
-            const [postsData, popularTagsData] = await Promise.all([
+            const [postsData, popularTagsData, authorStatsData] = await Promise.all([
                 getPosts(),
-                getPopularTags()
+                getPopularTags(),
+                getAuthorStats()
             ]);
 
             setPosts(postsData);
             setPopularTags(popularTagsData);
+            setTopAuthors(authorStatsData.map(a => ({ name: a.authorName, count: a.postCount })));
         } catch (err) {
             setError(err.message);
         } finally {
@@ -44,21 +47,6 @@ export function useDashboardData() {
     const totalLikes = posts.reduce((sum, post) => {
         return sum + (post.stats ? post.stats.likes : 0);
     }, 0);
-
-    const topAuthor = posts.reduce((count, post) => {
-        const authorName =
-            post.author_id && post.author_id.name
-                ? post.author_id.name
-                : "Unknown author";
-
-        count[authorName] = count[authorName] ? count[authorName] + 1 : 1;
-
-        return count;
-    }, {});
-
-    const topAuthors = Object.entries(topAuthor)
-        .map(([name, count]) => ({ name, count }))
-        .sort((a, b) => b.count - a.count);
 
     return {
         posts,
