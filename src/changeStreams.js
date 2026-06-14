@@ -6,14 +6,20 @@ const RESTART_DELAY_MS = 5000;
 
 export const watchComments = (resumeToken = null) => {
   const pipeline = [
-    { $match: { operationType: 'update', 'updateDescription.updatedFields.comments': { $exists: true } } }
+    { $match: { operationType: 'update' } }
   ];
 
   const options = resumeToken ? { resumeAfter: resumeToken } : {};
   const changeStream = Post.watch(pipeline, options);
 
+  let lastToken = resumeToken;
+
   changeStream.on('change', async (change) => {
-    const token = change._id;
+    lastToken = change._id;
+    const updatedFields = change.updateDescription?.updatedFields || {};
+    const isAdd = Object.keys(updatedFields).some(k => /^comments\.\d+/.test(k));
+    if (!isAdd) return;
+
     try {
       const post = await Post.findById(change.documentKey._id);
       if (!post) return;
@@ -22,7 +28,7 @@ export const watchComments = (resumeToken = null) => {
         user_id: post.author_id,
         post_id: post._id,
         content: `Ktoś skomentował Twój post "${post.content.substring(0, 30)}..."`,
-        expireAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        expireAt: new Date(Date.now() + 15 * 1000),
       });
 
       sendNotification(notification);
@@ -35,11 +41,11 @@ export const watchComments = (resumeToken = null) => {
     console.error('Change Stream error:', err);
     changeStream.close();
     if (err.code === 40573) return;
-    setTimeout(() => watchComments(resumeToken), RESTART_DELAY_MS);
+    setTimeout(() => watchComments(lastToken), RESTART_DELAY_MS);
   });
 
   changeStream.on('close', () => {
     console.log('Change Stream zamknięty, restartuję...');
-    setTimeout(() => watchComments(resumeToken), RESTART_DELAY_MS);
+    setTimeout(() => watchComments(lastToken), RESTART_DELAY_MS);
   });
 };
