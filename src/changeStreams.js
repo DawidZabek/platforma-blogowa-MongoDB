@@ -37,15 +37,22 @@ export const watchComments = (resumeToken = null) => {
     }
   });
 
+  let restarting = false;
+
+  const restart = () => {
+    if (restarting) return;
+    restarting = true;
+    setTimeout(() => watchComments(lastToken), RESTART_DELAY_MS);
+  };
+
   changeStream.on('error', (err) => {
     console.error('Change Stream error:', err);
-    changeStream.close();
     if (err.code === 40573) return;
-    setTimeout(() => watchComments(lastToken), RESTART_DELAY_MS);
+    restart();
   });
 
   changeStream.on('close', () => {
     console.log('Change Stream zamknięty, restartuję...');
-    setTimeout(() => watchComments(lastToken), RESTART_DELAY_MS);
+    restart();
   });
 };
