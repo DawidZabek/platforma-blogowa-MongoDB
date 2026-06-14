@@ -2,28 +2,57 @@ import Post from './models/post.js';
 import Notification from './models/notification.js';
 import { sendNotification } from './routes/notifications.js';
 
-export const watchComments = () => {
+const RESTART_DELAY_MS = 5000;
+
+export const watchComments = (resumeToken = null) => {
   const pipeline = [
-    { $match: { operationType: 'update', 'updateDescription.updatedFields.comments': { $exists: true } } }
+    { $match: { operationType: 'update' } }
   ];
 
-  const changeStream = Post.watch(pipeline);
+  const options = resumeToken ? { resumeAfter: resumeToken } : {};
+  const changeStream = Post.watch(pipeline, options);
+
+  let lastToken = resumeToken;
 
   changeStream.on('change', async (change) => {
-    const post = await Post.findById(change.documentKey._id);
-    if (!post) return;
+    lastToken = change._id;
+    const updatedFields = change.updateDescription?.updatedFields || {};
+    const isAdd = Object.keys(updatedFields).some(k => /^comments\.\d+/.test(k));
+    if (!isAdd) return;
 
-    const notification = await Notification.create({
-      user_id: post.author_id,
-      post_id: post._id,
-      content: `Ktoś skomentował Twój post "${post.content.substring(0, 30)}..."`,
-      expireAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-    });
+    try {
+      const post = await Post.findById(change.documentKey._id);
+      if (!post) return;
 
-    sendNotification(notification);
+      const notification = await Notification.create({
+        user_id: post.author_id,
+        post_id: post._id,
+        content: `Ktoś skomentował Twój post "${post.content.substring(0, 30)}..."`,
+        expireAt: new Date(Date.now() + 15 * 1000),
+      });
+
+      sendNotification(notification);
+    } catch (err) {
+      console.error('Change Stream: błąd przetwarzania zdarzenia:', err);
+    }
   });
+
+  let restarting = false;
+
+  const restart = () => {
+    if (restarting) return;
+    restarting = true;
+    setTimeout(() => watchComments(lastToken), RESTART_DELAY_MS);
+  };
 
   changeStream.on('error', (err) => {
     console.error('Change Stream error:', err);
+    if (err.code === 40573) return;
+    restart();
+  });
+
+  changeStream.on('close', () => {
+    console.log('Change Stream zamknięty, restartuję...');
+    restart();
   });
 };

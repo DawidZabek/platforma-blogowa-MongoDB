@@ -22,6 +22,11 @@ router.get('/stream', (req, res) => {
   req.on('close', () => clients.delete(client));
 });
 
+router.get('/', async (req, res) => {
+  const notifications = await Notification.find({ readAt: null }).sort({ createdAt: -1 });
+  res.json(notifications);
+});
+
 router.get('/:userId', async (req, res) => {
   const notifications = await Notification.findUnreadForUser(req.params.userId);
   res.json(notifications);
