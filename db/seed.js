@@ -18,7 +18,7 @@ const commentsPool = [
   'Super wpis!',
   'Dzięki za info, przydało się.',
   'Nie zgadzam się z Tobą w sekcji o bazach.',
-  'Twoja stara zapierdala napisał komentarz! - żartuję, super artykuł.',
+  'Twoja stara to kopara napisała komentarz! - żartuję, super artykuł.',
   'Możesz napisać o tym coś więcej?',
   'Ciekawa perspektywa.',
   'Właśnie tego szukałem.',
